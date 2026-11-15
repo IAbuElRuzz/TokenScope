@@ -1,0 +1,21 @@
+# Central server has no host CLI log mounts. Terminate TLS at your reverse proxy.
+services:
+  tokenscope:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      TOKENSCOPE_MODE: server
+      TOKENSCOPE_DATA_DIR: /data
+      TOKENSCOPE_PUBLIC_ORIGIN: ${TOKENSCOPE_PUBLIC_ORIGIN:?Set the public HTTPS origin}
+      TOKENSCOPE_RETENTION_DAYS: 90
+    volumes:
+      - tokenscope-server-data:/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: [/tmp]
+    restart: unless-stopped
+volumes:
+  tokenscope-server-data:

@@ -15,3 +15,12 @@ Interactive schema: `http://127.0.0.1:8000/docs`. All `/api` HTTP routes require
 See `backend/core/schema.py` and OpenAPI for the canonical contract. Provider, tool, model, session_id, event_id, timezone-aware timestamp required; revision defaults zero. Count categories must be nonnegative. `accounting="delta"` required at ingestion. Optional `billed_cost_usd` is a trusted instrumented source claim; TokenScope does not verify invoices. Do not include request/response bodies or API keys. Unknown properties are discarded.
 
 Optional prompt-derived fields require explicit `prompt_analysis_opt_in=true`: scoped HMAC `prompt_fingerprint` and `prompt_characters`. Unknown raw prompt/body properties are discarded. See [analytics privacy](analytics.md) before enabling.
+
+
+## Server-mode account API
+
+Explicit server mode replaces standalone bearer authentication with private account cookie sessions. `GET /api/config` identifies the mode. `POST /api/auth/login` accepts username/password from the configured browser Origin and sets an HttpOnly Secure SameSite cookie; `GET /api/auth/me` returns account identity and CSRF token. Logout and all browser mutations require matching Origin and `X-CSRF-Token`. All usage read/export/analytics/WebSocket routes are scoped to that authenticated account.
+
+`GET/POST /api/devices` lists/registers own devices; registration returns a one-time ingest credential. `DELETE /api/devices/{id}` revokes an own device. `POST /api/ingest` accepts `{events:[UsageEvent,...]}` up to 100 items and requires a separate registered device bearer credential. It returns exact native event ID/revision acknowledgements. The server derives account and device identity from that credential and namespaces event/session IDs. A browser cookie cannot ingest; a device token cannot read dashboards.
+
+`GET /api/admin/overview` requires an admin account and returns aggregate account/device/request/token/known-cost totals only. No raw cross-account timeline endpoint is exposed. See [server.md](server.md) for trust boundaries, deployment, retention and enrollment.

@@ -101,7 +101,16 @@ class Store:
                 sessions[key] = {
                     **{
                         k: event.get(k)
-                        for k in ("session_id", "provider", "tool", "model", "project", "billing")
+                        for k in (
+                            "session_id",
+                            "provider",
+                            "tool",
+                            "model",
+                            "project",
+                            "billing",
+                            "device_id",
+                            "source_session_id",
+                        )
                     },
                     **{k: 0 for k in CATEGORIES},
                     "cost_usd": None,

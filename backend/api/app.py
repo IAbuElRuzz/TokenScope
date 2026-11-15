@@ -18,6 +18,10 @@ log = logging.getLogger("tokenscope")
 
 def create_app(data_dir: Path | None = None, scanner=None, token: str | None = None):
     root = data_dir or data_directory()
+    if os.getenv("TOKENSCOPE_MODE", "standalone") == "server":
+        from backend.server.app import create_server_app
+
+        return create_server_app(root)
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
     secret = token or api_token(root)
     store = Store(root / "usage.db", Pricing(root / "pricing.json"))
@@ -102,6 +106,10 @@ def create_app(data_dir: Path | None = None, scanner=None, token: str | None = N
         response.headers["Referrer-Policy"] = "no-referrer"
         response.headers["Cache-Control"] = "no-store"
         return response
+
+    @app.get("/api/config")
+    def config():
+        return {"mode": "standalone"}
 
     @app.get("/health")
     def health():
