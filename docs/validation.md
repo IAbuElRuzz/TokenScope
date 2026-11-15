@@ -27,12 +27,18 @@ This release does **not** meet the entire production definition in the original 
 
 - Live vendor validation with simultaneous actual Claude Code/Codex/Gemini binaries; numerical supported release ranges and platform-specific log fixtures.
 - Browser-driven end-to-end tests and actual screenshot visual verification; current frontend tests cover components and data, not browser interaction.
-- Full date-range event aggregation, SQL pagination/large-history optimization, dedicated multi-session comparison workflow.
+- Full date-range event aggregation and SQL pagination/large-history optimization remain open. Detailed full-history provider/model/session comparison is now implemented, but does not measure equivalent task quality.
 - Automatic Cursor support, OTLP receiver, optional proxy, PostgreSQL backend, dynamically downloaded catalog, comprehensive current/historical model pricing and context metadata.
 - Automated entry-point plugin loading; adapter injection and explicit SDK metadata instrumentation work.
 - Complete prompt/tool counters and generation timing from native logs, confirmed session termination, exact context occupancy; these fields may be unavailable.
-- Repeated-prompt analysis is unavailable by design without opt-in content-derived fingerprints. Optional AI explanations and outbound notification transports are not implemented.
+- Repeated-prompt candidates now support explicit SDK-only opt-in scoped HMAC fingerprints. Native prompt collection, semantic similarity, automatic prompt rewriting, optional AI explanations and outbound notification transports are not implemented.
 - Complete billing tier/cache TTL pricing, invoice verification and subscription allowance mapping.
 - Dependency security audit, signed packages, observed CI/release workflow execution, full cross-platform installer/runtime verification and container runtime verification.
 
 Internal source-log corrections arriving after truncation may have lower replay revision order and remain conservatively ignored; ingest authoritative higher-revision canonical corrections for such cases. Codex counter decreases are ignored to avoid double-counting stale snapshots; true undocumented counter resets can therefore undercount until a verified reset format is supported.
+
+## Analytics follow-up validation
+
+Detailed analytics regression tests cover provider overlap/residuals, invalid categories, partial pricing/billed coverage, no-prompt default, HMAC scope/rotation, consent validation, repeated distinct requests vs telemetry identity collisions, window/model/project boundaries, context boundaries, baseline thresholds, full history beyond 1,000 events, revisions/restart/deletion, authenticated API and snapshot consistency. Frontend tests cover unavailable evidence, exact counts, partial pricing, recommendation limitations and event IDs. This does not add live vendor/browser validation or a production SLA.
+
+Final analytics branch checks: **35 backend tests, 17 frontend tests, Ruff and strict TypeScript/Vite production build passed**. Synthetic 2,000-event benchmark after analytics: about 3,023 ingestions/second, 361 ms full snapshot including analytics, 9.24 MB traced peak Python memory on this run. These single-run figures do not establish improvement over another run or a production latency guarantee.

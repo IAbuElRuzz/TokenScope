@@ -164,11 +164,18 @@ class Store:
         from backend.analytics.engine import analyze
 
         alerts = analyze(list(sessions.values()), events, now)
+        from backend.analytics.report import build_report
+
+        analytics = build_report(events)
         return {
-            "sessions": sorted(sessions.values(), key=lambda s: (-datetime.fromisoformat(s["last_seen"]).timestamp(), s["session_id"])),
+            "sessions": sorted(
+                sessions.values(),
+                key=lambda s: (-datetime.fromisoformat(s["last_seen"]).timestamp(), s["session_id"]),
+            ),
             "events": events[-1000:],
             "totals": totals,
             "alerts": alerts,
+            "analytics": analytics,
             "generated_at": now.isoformat(),
         }
 
