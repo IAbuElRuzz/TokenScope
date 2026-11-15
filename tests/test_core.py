@@ -246,3 +246,18 @@ def test_two_source_automatic_ingestion_and_restart(tmp_path):
                     assert any(e["event_id"] == "latency" for e in update["events"])
                     assert time.perf_counter() - started < 0.5
                     client.delete("/api/sessions/s", headers={"Authorization": "Bearer secret"})
+
+
+def test_snapshot_sessions_newest_first_preserves_full_history(tmp_path):
+    store = Store(tmp_path/'db')
+    store.ingest(event(event_id='old',session_id='past',timestamp=datetime(2026,1,1,tzinfo=timezone.utc)))
+    store.ingest(event(event_id='new',session_id='latest',timestamp=datetime(2026,1,3,tzinfo=timezone.utc)))
+    store.ingest(event(event_id='middle',session_id='middle',timestamp=datetime(2026,1,2,tzinfo=timezone.utc)))
+    sessions = store.snapshot()['sessions']
+    assert [s['session_id'] for s in sessions] == ['latest','middle','past']
+    assert sum(s['total_tokens'] for s in sessions) == 360
+    store.ingest(event(event_id='return',session_id='past',timestamp=datetime(2026,1,4,tzinfo=timezone.utc)))
+    sessions = store.snapshot()['sessions']
+    assert sessions[0]['session_id'] == 'past'
+    assert sessions[0]['total_tokens'] == 240
+    store.close()
