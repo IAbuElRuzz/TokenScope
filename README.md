@@ -135,3 +135,7 @@ git push -u origin main
 ```
 
 MIT licensed. Contributions to documented formats, adapters, accounting and reliability are welcome.
+
+## Operational visibility
+
+The dashboard's Operations section provides [collector health](docs/collector-health.md) and [daily/monthly budgets](docs/budgets.md). History browsing uses [cursor pagination, SQL totals and streaming exports](docs/history-scaling.md). Budget alerts use measured retained costs and remain advisory; estimated API-equivalent costs are separate from supplied billed costs.
