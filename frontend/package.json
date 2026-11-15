@@ -1,0 +1,25 @@
+{
+  "name": "tokenscope-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build && node scripts/package.mjs",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "typescript": "5.7.2",
+    "vite": "5.4.10",
+    "vitest": "2.1.4"
+  },
+  "overrides": {
+    "rollup": "4.50.0"
+  }
+}
