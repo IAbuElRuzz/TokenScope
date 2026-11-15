@@ -6,6 +6,7 @@ Actual checks performed in the development sandbox (2026-11-15):
 - Frontend: strict TypeScript and Vite production build; six Vitest tests (data accounting/filtering and context gauge server-rendered component tests).
 - Ruff configured lint rules passed.
 - Built `tokenscope-0.1.0-py3-none-any.whl` using cached setuptools; inspected included dashboard HTML/JS/CSS, pricing catalog, API modules and CLI entry point. Wheel build succeeded; clean online dependency installation was not validated.
+- Actual CLI ASGI startup reached application-ready, but binding localhost:8000 was denied by the sandbox (EPERM), preventing a live browser smoke test. TestClient API/WebSocket integration did succeed.
 - `docker compose config --quiet` passed. Container build/run could not be tested: Docker socket permission denied in the sandbox. A running daemon does not change that restriction.
 - Synthetic ingestion benchmark: 2,000 events, approximately 1,919 events/second, 257 ms full snapshot, 8.5 MB traced peak Python memory. These are one-machine test numbers, not a production SLA. No browser-render or provider-completion latency claim follows from them.
 
