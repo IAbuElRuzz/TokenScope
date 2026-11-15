@@ -1,10 +1,15 @@
 import os
 from datetime import datetime, timedelta
 from statistics import median
+from collections import defaultdict
 
 
 def analyze(sessions, events, now):
     alerts = []
+    usage_by_session = defaultdict(list)
+    for event in events:
+        if event["kind"] == "usage":
+            usage_by_session[event["session_id"]].append(event)
 
     def emit(key, title, detail, severity="warning"):
         alerts.append({"id": key, "title": title, "message": detail, "severity": severity})
@@ -35,7 +40,7 @@ def analyze(sessions, events, now):
                 "Long-running session",
                 f"{sid} has history spanning over eight hours. Idle time may be included.",
             )
-        own = [e for e in events if e["session_id"] == sid and e["kind"] == "usage"]
+        own = usage_by_session[sid]
         if len(own) >= 6:
             baseline = median(e["total_tokens"] for e in own[:-1])
             if baseline and own[-1]["total_tokens"] > baseline * 3:

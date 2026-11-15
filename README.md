@@ -49,6 +49,7 @@ Data lives under `~/.tokenscope` (override `TOKENSCOPE_DATA_DIR`). Logs are read
 - Multiple sessions, safe log replay, revision replacement, duplicate suppression, idle status, compaction where recorded.
 - Current context is **estimated from the latest request input**, never lifetime token sums. Unknown capacity stays unavailable. Codex provides a source-reported maximum; other maxima may come from editable model metadata.
 - Costs are **estimated API-equivalent**, not subscription bills. Actual billed USD is only accepted from explicitly instrumented authoritative sources. Missing prices remain unavailable, including unsupported cache TTLs.
+- Detailed analytics compare full-history provider/model/session usage, expose token overlap and cost coverage, and identify evidence-backed optimization opportunities. Optional HMAC prompt fingerprints identify repeated-prompt candidates without storing prompt text; disabled by default. See [analytics and privacy](docs/analytics.md).
 - Deterministic alerts cover context thresholds, model changes, token spikes, long session histories, no reported cache reads, session and rolling daily/weekly/30-day budgets. Desktop browser notifications require your click and permission.
 
 Sessions are grouped by LLM provider and ordered by latest measured activity. Each group keeps its newest session visible even when idle, alongside other active sessions. Older inactive sessions remain accessible under **Past sessions**, ordered newest first. Exact session token totals and provider totals include past sessions and all retained usage, independently of the recent chart limit.
@@ -99,7 +100,7 @@ Reproduce a screenshot: launch with your own supported sessions, sign into the l
 
 ## Documentation
 
-[Architecture](docs/architecture.md) · [Compatibility and research](docs/compatibility.md) · [API](docs/api.md) · [Plugins](docs/plugins.md) · [Troubleshooting](docs/troubleshooting.md) · [Validation and remaining work](docs/validation.md) · [Security](SECURITY.md)
+[Detailed analytics](docs/analytics.md) · [Architecture](docs/architecture.md) · [Compatibility and research](docs/compatibility.md) · [API](docs/api.md) · [Plugins](docs/plugins.md) · [Troubleshooting](docs/troubleshooting.md) · [Validation and remaining work](docs/validation.md) · [Security](SECURITY.md)
 
 ## Publishing
 

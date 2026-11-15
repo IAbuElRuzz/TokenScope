@@ -1,7 +1,8 @@
+import type {AnalyticsReport} from './AnalyticsPanel';
 export type Session={session_id:string;provider:string;tool:string;model:string;project?:string;status:string;input_tokens:number;output_tokens:number;cache_read_tokens:number;cache_creation_tokens:number;reasoning_tokens:number;total_tokens:number;cost_usd:number|null;context_tokens?:number|null;context_window?:number|null;context_accuracy?:string;last_seen:string};
 export type UsageEvent={event_id:string;session_id:string;timestamp:string;provider:string;model:string;tool?:string;tokens?:Record<string,number>;input_tokens?:number;output_tokens?:number;context_tokens?:number|null;total_tokens?:number;cost_usd?:number|null;context?:{used?:number;window?:number};[key:string]:unknown};
 export type Alert={id?:string;message:string;severity?:string};
-export type Snapshot={sessions:Session[];events:UsageEvent[];totals:Record<string,number>;alerts:Alert[]};
+export type Snapshot={analytics?:AnalyticsReport;sessions:Session[];events:UsageEvent[];totals:Record<string,number>;alerts:Alert[]};
 export const empty:Snapshot={sessions:[],events:[],totals:{},alerts:[]};
 export const count=(n:number|undefined|null)=>n==null?'—':new Intl.NumberFormat('en',{notation:n>=10000?'compact':'standard',maximumFractionDigits:1}).format(n);
 export const money=(n:number|undefined|null)=>n==null?'Unavailable':new Intl.NumberFormat('en',{style:'currency',currency:'USD',maximumFractionDigits:4}).format(n);

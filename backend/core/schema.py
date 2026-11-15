@@ -37,9 +37,21 @@ class UsageEvent(BaseModel):
     tool_calls: int = Field(default=0, ge=0)
     billed_cost_usd: float | None = Field(default=None, ge=0)
     billing: Literal["unknown", "subscription", "api", "local"] = "unknown"
+    prompt_analysis_opt_in: bool = False
+    prompt_fingerprint: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
+    prompt_fingerprint_scope: str | None = Field(default=None, min_length=1, max_length=64)
+    prompt_characters: int | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
     def normalize(self):
+        if (
+            self.prompt_fingerprint is not None
+            or self.prompt_characters is not None
+            or self.prompt_fingerprint_scope is not None
+        ) and not self.prompt_analysis_opt_in:
+            raise ValueError("Prompt-derived metadata requires explicit prompt_analysis_opt_in")
+        if (self.prompt_fingerprint is None) != (self.prompt_fingerprint_scope is None):
+            raise ValueError("Prompt fingerprints require a comparison scope")
         if self.timestamp.tzinfo is None:
             raise ValueError("timestamp must include timezone")
         self.timestamp = self.timestamp.astimezone(timezone.utc)

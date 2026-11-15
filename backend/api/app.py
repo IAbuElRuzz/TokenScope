@@ -111,6 +111,12 @@ def create_app(data_dir: Path | None = None, scanner=None, token: str | None = N
     def snapshot():
         return store.snapshot()
 
+    @app.get("/api/analytics", dependencies=[Depends(authorized)])
+    def analytics():
+        from backend.analytics.report import build_report
+
+        return build_report(store.events())
+
     @app.get("/api/events", dependencies=[Depends(authorized)])
     def events(session_id: str | None = None):
         return store.events(session_id)
