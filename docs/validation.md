@@ -5,6 +5,7 @@ Actual checks performed in the development sandbox (2026-11-15):
 - Backend pytest: accounting subsets, revision/replay/restart, context independent from totals, pricing arithmetic/history, concurrent sessions, API authentication, Host/Origin rejection, WebSocket reconnect, deletion/tombstones, malformed inputs, local transport credential protection, deterministic alerts, retention, eight local-adapter fixtures, two-source automatic collector integration and local WebSocket delivery assertion below 500 ms.
 - Frontend: strict TypeScript and Vite production build; six Vitest tests (data accounting/filtering and context gauge server-rendered component tests).
 - Ruff configured lint rules passed.
+- Built `tokenscope-0.1.0-py3-none-any.whl` using cached setuptools; inspected included dashboard HTML/JS/CSS, pricing catalog, API modules and CLI entry point. Wheel build succeeded; clean online dependency installation was not validated.
 - `docker compose config --quiet` passed. Container build/run could not be tested: Docker socket permission denied in the sandbox. A running daemon does not change that restriction.
 - Synthetic ingestion benchmark: 2,000 events, approximately 1,919 events/second, 257 ms full snapshot, 8.5 MB traced peak Python memory. These are one-machine test numbers, not a production SLA. No browser-render or provider-completion latency claim follows from them.
 
