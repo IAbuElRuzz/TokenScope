@@ -27,3 +27,11 @@ export class LatestRequest {
  begin(){this.controller?.abort();const controller=new AbortController(),serial=++this.serial;this.controller=controller;return {signal:controller.signal,current:()=>this.serial===serial&&!controller.signal.aborted};}
  cancel(){this.serial++;this.controller?.abort();this.controller=null;}
 }
+
+export type CursorHistoryPage={items:UsageEvent[];page_size:number;total_items:number;totals:AnalyticsSummary;next_cursor:string|null;filters:Record<string,unknown>};
+
+export function historyCursorQuery(filters:HistoryFilters,cursor:string|null=null){
+ const query=new URLSearchParams(historyQuery(filters));
+ if(cursor)query.set('cursor',cursor);
+ return query.toString();
+}
