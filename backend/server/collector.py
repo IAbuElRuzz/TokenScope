@@ -57,6 +57,7 @@ class Spool:
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS deliveries (event_id TEXT,revision INTEGER,payload TEXT,delivered INTEGER DEFAULT 0,PRIMARY KEY(event_id,revision))"
         )
+        self.db.execute("CREATE TABLE IF NOT EXISTS collector_state (key TEXT PRIMARY KEY,value TEXT)")
         self.db.commit()
         path.chmod(0o600)
 
@@ -74,6 +75,14 @@ class Spool:
                     (event.event_id, event.revision, event.model_dump_json()),
                 )
         return invalid
+
+    def state(self, key, default=None):
+        row = self.db.execute("SELECT value FROM collector_state WHERE key=?", (key,)).fetchone()
+        return json.loads(row[0]) if row else default
+
+    def save_state(self, key, value):
+        with self.db:
+            self.db.execute("INSERT OR REPLACE INTO collector_state VALUES(?,?)", (key, json.dumps(value)))
 
     def pending(self):
         return self.db.execute("SELECT COUNT(*) FROM deliveries WHERE delivered=0").fetchone()[0]
@@ -112,12 +121,17 @@ class Collector:
         self.spool = spool
         self.scanner = scanner
         self.opener = build_opener(NoRedirect())
+        self.invalid_records = spool.state("invalid_records", 0)
+        self.last_successful_sync = spool.state("last_successful_sync")
+        self.last_heartbeat = 0.0
 
     def scan(self):
         # Pause before reading a new batch rather than drop metadata on a network outage.
         # One initial log replay can exceed this soft threshold; receipts remain durable.
         if self.spool.pending() < 100000:
             invalid = self.spool.enqueue(self.scanner.poll())
+            self.invalid_records += invalid
+            self.spool.save_state("invalid_records", self.invalid_records)
             if invalid:
                 print(f"Collector skipped {invalid} invalid metadata records; inspect adapter diagnostics.")
 
@@ -151,7 +165,27 @@ class Collector:
         acknowledged = previous - self.spool.pending()
         if not acknowledged:
             raise ValueError("Server acknowledged no pending metadata")
+        self.last_successful_sync = time.time()
+        self.spool.save_state("last_successful_sync", self.last_successful_sync)
         return acknowledged
+
+    def heartbeat(self, force=False):
+        if not force and time.monotonic() - self.last_heartbeat < 15:
+            return
+        diagnostics = self.scanner.doctor() if hasattr(self.scanner, 'doctor') else []
+        sources = [{k: row[k] for k in ('tool', 'available', 'readable', 'malformed_records') if k in row} for row in diagnostics]
+        body = dict(protocol_version=1, collector_version='0.1.0', pending_events=self.spool.pending(),
+                    invalid_records=self.invalid_records, last_successful_sync=self.last_successful_sync, sources=sources)
+        request = Request(self.server + '/api/collector-heartbeat', data=json.dumps(body).encode(),
+                          headers={'Authorization': 'Bearer ' + self.token, 'Content-Type': 'application/json'})
+        try:
+            with self.opener.open(request, timeout=20) as response:
+                response.read(4096)
+            self.last_heartbeat = time.monotonic()
+        except HTTPError as error:
+            if error.code in (401, 403):
+                raise CollectorAuthorizationError('Device authorization rejected') from None
+            raise
 
     def run(self, once=False):
         backoff = 1
@@ -163,6 +197,13 @@ class Collector:
                         self.flush()
                 else:
                     self.flush()
+                # Health is best effort; ingestion success is independent of diagnostics delivery.
+                try:
+                    self.heartbeat(force=once)
+                except CollectorAuthorizationError:
+                    raise
+                except Exception:
+                    pass
                 backoff = 1
             except CollectorAuthorizationError:
                 raise

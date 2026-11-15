@@ -155,6 +155,10 @@ def create_app(data_dir: Path | None = None, scanner=None, token: str | None = N
         await broadcast()
         return {"deleted": deleted}
 
+    @app.get("/api/collector-health", dependencies=[Depends(authorized)])
+    def collector_health():
+        return {"devices": []}
+
     @app.get("/api/providers", dependencies=[Depends(authorized)])
     def providers():
         from backend.adapters import LocalAdapters
