@@ -1,0 +1,23 @@
+services:
+  tokenscope:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      TOKENSCOPE_DATA_DIR: /data
+      TOKENSCOPE_CLAUDE_ROOT: /sources/claude
+      TOKENSCOPE_CODEX_ROOT: /sources/codex
+      TOKENSCOPE_GEMINI_ROOT: /sources/gemini
+    volumes:
+      - tokenscope-data:/data
+      - ${HOME}/.claude/projects:/sources/claude:ro
+      - ${HOME}/.codex/sessions:/sources/codex:ro
+      - ${HOME}/.gemini/tmp:/sources/gemini:ro
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: [/tmp]
+    restart: unless-stopped
+volumes:
+  tokenscope-data:
