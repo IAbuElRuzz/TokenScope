@@ -24,3 +24,8 @@ Explicit server mode replaces standalone bearer authentication with private acco
 `GET/POST /api/devices` lists/registers own devices; registration returns a one-time ingest credential. `DELETE /api/devices/{id}` revokes an own device. `POST /api/ingest` accepts `{events:[UsageEvent,...]}` up to 100 items and requires a separate registered device bearer credential. It returns exact native event ID/revision acknowledgements. The server derives account and device identity from that credential and namespaces event/session IDs. A browser cookie cannot ingest; a device token cannot read dashboards.
 
 `GET /api/admin/overview` requires an admin account and returns aggregate account/device/request/token/known-cost totals only. No raw cross-account timeline endpoint is exposed. See [server.md](server.md) for trust boundaries, deployment, retention and enrollment.
+
+
+## Full history / investigation
+
+`GET /api/history` accepts timezone-aware `start` inclusive / `end` exclusive, exact `provider`, `model`, `tool`, `session_id`, `project`, `device_id`, `request_id`, and `page`/`page_size` (1–200). It returns page items, full matching count/totals/analytics and same-account filter options. `GET /api/history/requests/{event_id}` returns scoped canonical metadata, accounting, persisted pricing provenance and capped related duplicate evidence; absent/other-account events return 404. `GET /api/export` accepts the same filters and exports every match, independent of pagination. All are authenticated according to mode. See [history.md](history.md) for UTC day conversion, consistency, privacy and scale limits.

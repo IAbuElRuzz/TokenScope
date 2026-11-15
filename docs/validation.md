@@ -27,7 +27,7 @@ This release does **not** meet the entire production definition in the original 
 
 - Live vendor validation with simultaneous actual Claude Code/Codex/Gemini binaries; numerical supported release ranges and platform-specific log fixtures.
 - Browser-driven end-to-end tests and actual screenshot visual verification; current frontend tests cover components and data, not browser interaction.
-- Full date-range event aggregation and SQL pagination/large-history optimization remain open. Detailed full-history provider/model/session comparison is now implemented, but does not measure equivalent task quality.
+- UTC date-range and metadata filtering, list pagination, all-match totals/analytics/export, and request investigation are now implemented. Full SQL analytics aggregation, streaming exports and cursor pagination for very large archives remain open; usage comparisons do not measure equivalent task quality.
 - Automatic Cursor support, OTLP receiver, optional proxy, PostgreSQL backend, dynamically downloaded catalog, comprehensive current/historical model pricing and context metadata.
 - Automated entry-point plugin loading; adapter injection and explicit SDK metadata instrumentation work.
 - Complete prompt/tool counters and generation timing from native logs, confirmed session termination, exact context occupancy; these fields may be unavailable.
@@ -42,3 +42,8 @@ Internal source-log corrections arriving after truncation may have lower replay 
 Detailed analytics regression tests cover provider overlap/residuals, invalid categories, partial pricing/billed coverage, no-prompt default, HMAC scope/rotation, consent validation, repeated distinct requests vs telemetry identity collisions, window/model/project boundaries, context boundaries, baseline thresholds, full history beyond 1,000 events, revisions/restart/deletion, authenticated API and snapshot consistency. Frontend tests cover unavailable evidence, exact counts, partial pricing, recommendation limitations and event IDs. This does not add live vendor/browser validation or a production SLA.
 
 Final analytics branch checks: **35 backend tests, 17 frontend tests, Ruff and strict TypeScript/Vite production build passed**. Synthetic 2,000-event benchmark after analytics: about 3,023 ingestions/second, 361 ms full snapshot including analytics, 9.24 MB traced peak Python memory on this run. These single-run figures do not establish improvement over another run or a production latency guarantee.
+
+
+## Historical filtering follow-up
+
+Added full-ledger filtering/investigation tests for 1,051-event pagination and all-match totals/export, exact combined metadata filters and SQL binding, UTC-offset/microsecond boundaries, timestamp tie ordering, empty pages, old and interrupted migration recovery, numeric retention boundaries, persisted pricing provenance, scoped duplicate evidence, excluded context-boundary preservation, API validation/authentication and server tenant isolation. Frontend adds UTC through-day conversion, request cancellation/generation guard and evidence rendering tests. Pagination is indexed; full filtered analytics/export remain in-memory. No live browser/network validation is implied.

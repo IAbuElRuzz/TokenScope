@@ -55,6 +55,10 @@ tokenscope server
 tokenscope collect --server https://tokens.example.com --device-token-file /private/path/device-token
 ```
 
+## Historical investigation
+
+The dashboard now searches the complete retained ledger with UTC date, provider/model/tool/session/project/device/request filters, real pagination and totals/analytics across every filtered match. Investigate an event to see token accounting, historical pricing source and cautious duplicate-request evidence; export all filtered events beyond the current page. See [history and investigation](docs/history.md). Each server account sees only its own ledger.
+
 ## What is measured
 
 - Input/output, cache reads/writes, reasoning, reported totals, model, session, project basename, request timeline.
@@ -112,7 +116,7 @@ Reproduce a screenshot: launch with your own supported sessions, sign into the l
 
 ## Documentation
 
-[Server mode](docs/server.md) · [Detailed analytics](docs/analytics.md) · [Architecture](docs/architecture.md) · [Compatibility and research](docs/compatibility.md) · [API](docs/api.md) · [Plugins](docs/plugins.md) · [Troubleshooting](docs/troubleshooting.md) · [Validation and remaining work](docs/validation.md) · [Security](SECURITY.md)
+[History and investigation](docs/history.md) · [Server mode](docs/server.md) · [Detailed analytics](docs/analytics.md) · [Architecture](docs/architecture.md) · [Compatibility and research](docs/compatibility.md) · [API](docs/api.md) · [Plugins](docs/plugins.md) · [Troubleshooting](docs/troubleshooting.md) · [Validation and remaining work](docs/validation.md) · [Security](SECURITY.md)
 
 ## Publishing
 

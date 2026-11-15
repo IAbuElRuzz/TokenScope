@@ -5,6 +5,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from backend.core.schema import UsageEvent
 from backend.pricing.engine import Pricing
+from backend.storage.history import HistoryFilters, epoch_us
 
 CATEGORIES = (
     "input_tokens",
@@ -28,6 +29,20 @@ class Store:
         )
         self.db.execute("CREATE TABLE IF NOT EXISTS tombstones (id TEXT PRIMARY KEY)")
         self.db.execute("CREATE INDEX IF NOT EXISTS events_session ON events(session_id,timestamp)")
+        columns = {row[1] for row in self.db.execute("PRAGMA table_info(events)")}
+        if "occurred_us" not in columns:
+            self.db.execute("ALTER TABLE events ADD COLUMN occurred_us INTEGER")
+        # Resume an interrupted migration even if ALTER had already persisted.
+        self.db.executemany(
+            "UPDATE events SET occurred_us=? WHERE id=?",
+            [
+                (epoch_us(stamp), identifier)
+                for identifier, stamp in self.db.execute(
+                    "SELECT id,timestamp FROM events WHERE occurred_us IS NULL"
+                ).fetchall()
+            ],
+        )
+        self.db.execute("CREATE INDEX IF NOT EXISTS events_chronological ON events(occurred_us DESC,id DESC)")
         self.db.commit()
         self.pricing = pricing or Pricing()
 
@@ -56,13 +71,14 @@ class Store:
                     }
             payload.update(pricing.quote(event))
             self.db.execute(
-                "INSERT OR REPLACE INTO events VALUES(?,?,?,?,?)",
+                "INSERT OR REPLACE INTO events(id,revision,timestamp,session_id,payload,occurred_us) VALUES(?,?,?,?,?,?)",
                 (
                     event.event_id,
                     event.revision,
                     event.timestamp.isoformat(),
                     event.session_id,
                     json.dumps(payload),
+                    epoch_us(event.timestamp),
                 ),
             )
         return True
@@ -71,11 +87,152 @@ class Store:
         with self.lock:
             if session_id:
                 rows = self.db.execute(
-                    "SELECT payload FROM events WHERE session_id=? ORDER BY timestamp,id", (session_id,)
+                    "SELECT payload FROM events WHERE session_id=? ORDER BY occurred_us,id", (session_id,)
                 ).fetchall()
             else:
-                rows = self.db.execute("SELECT payload FROM events ORDER BY timestamp,id").fetchall()
+                rows = self.db.execute("SELECT payload FROM events ORDER BY occurred_us,id").fetchall()
         return [json.loads(row[0]) for row in rows]
+
+    def filtered_events(self, filters=None):
+        filters = filters or HistoryFilters()
+        where, args = filters.sql()
+        with self.lock:
+            rows = self.db.execute(
+                "SELECT payload FROM events" + where + " ORDER BY occurred_us,id", args
+            ).fetchall()
+        return [json.loads(row[0]) for row in rows]
+
+    def history(self, filters=None, page=1, page_size=50):
+        from backend.analytics.report import build_report
+
+        filters = filters or HistoryFilters()
+        if page < 1 or not 1 <= page_size <= 200:
+            raise ValueError("History pagination out of range")
+        where, args = filters.sql()
+        with self.lock:
+            # Consistent list/count/aggregates for this response, even during concurrent ingestion.
+            matched = self.filtered_events(filters)
+            context_history = self.events() if filters.public() else matched
+            rows = self.db.execute(
+                "SELECT payload FROM events" + where + " ORDER BY occurred_us DESC,id DESC LIMIT ? OFFSET ?",
+                [*args, page_size, (page - 1) * page_size],
+            ).fetchall()
+            options = {}
+            for plural, field in [
+                ("providers", "provider"),
+                ("models", "model"),
+                ("tools", "tool"),
+                ("sessions", "session_id"),
+                ("projects", "project"),
+                ("devices", "device_id"),
+            ]:
+                expression = "session_id" if field == "session_id" else f"json_extract(payload,'$.{field}')"
+                values = self.db.execute(
+                    "SELECT DISTINCT " + expression + " FROM events ORDER BY 1"
+                ).fetchall()
+                options[plural] = [row[0] for row in values if row[0] is not None and row[0] != ""]
+        report = build_report(matched, context_history=context_history)
+        report["limits"][0] = (
+            "All retained events matching the supplied history filters, across every result page. Context boundary checks also consider this account’s unfiltered timeline without adding its excluded usage to totals."
+        )
+        count = len(matched)
+        return {
+            "items": [json.loads(row[0]) for row in rows],
+            "page": page,
+            "page_size": page_size,
+            "total_items": count,
+            "total_pages": (count + page_size - 1) // page_size,
+            "totals": report["summary"],
+            "analytics": report,
+            "filters": filters.public(),
+            "options": options,
+        }
+
+    def request_detail(self, event_id):
+        from backend.analytics.report import token_parts
+
+        with self.lock:
+            row = self.db.execute("SELECT payload FROM events WHERE id=?", (event_id,)).fetchone()
+            if not row:
+                return None
+            event = json.loads(row[0])
+            own = self.filtered_events(HistoryFilters(provider=event["provider"]))
+        parts = token_parts(event)
+        parts["provider_total_residual_tokens"] = (
+            event["total_tokens"] - parts["input_total_tokens"] - parts["output_total_tokens"]
+        )
+        identities = {}
+        for candidate in own:
+            if candidate["kind"] == "usage" and candidate.get("request_id"):
+                key = (candidate["session_id"], candidate["request_id"])
+                identities.setdefault(key, []).append(candidate)
+        collisions = (
+            identities.get((event["session_id"], event.get("request_id")), [])
+            if event.get("request_id")
+            else []
+        )
+        collisions = [candidate for candidate in collisions if candidate["event_id"] != event_id]
+        repeated = []
+        if event.get("prompt_analysis_opt_in") and event.get("prompt_fingerprint") and not collisions:
+            stamp = epoch_us(event["timestamp"])
+            for candidate in own:
+                identity = (candidate["session_id"], candidate.get("request_id") or candidate["event_id"])
+                if (
+                    candidate["kind"] == "usage"
+                    and candidate["event_id"] != event_id
+                    and candidate.get("prompt_analysis_opt_in")
+                    and candidate.get("prompt_fingerprint") == event["prompt_fingerprint"]
+                    and candidate.get("prompt_fingerprint_scope") == event.get("prompt_fingerprint_scope")
+                    and candidate["model"] == event["model"]
+                    and candidate.get("project") == event.get("project")
+                    and abs(epoch_us(candidate["timestamp"]) - stamp) <= 900_000_000
+                    and not (candidate.get("request_id") and len(identities.get(identity, [])) > 1)
+                    and identity != (event["session_id"], event.get("request_id") or event["event_id"])
+                ):
+                    repeated.append(candidate)
+
+        def evidence(records):
+            return [
+                {
+                    key: record.get(key)
+                    for key in (
+                        "event_id",
+                        "session_id",
+                        "device_id",
+                        "request_id",
+                        "timestamp",
+                        "total_tokens",
+                        "cost_usd",
+                    )
+                }
+                for record in records[:20]
+            ]
+
+        return {
+            "event": event,
+            "accounting": parts,
+            "pricing": {
+                "estimated_cost_usd": event.get("cost_usd"),
+                "billed_cost_usd": event.get("billed_cost_usd"),
+                "confidence": event.get("cost_confidence", "unavailable"),
+                "source": event.get("pricing_source"),
+                "version": event.get("pricing_version"),
+                "record": event.get("pricing_record"),
+            },
+            "related": {
+                "telemetry_identity_collisions": evidence(collisions),
+                "repeated_prompt_candidates": evidence(repeated),
+                "telemetry_identity_collision_count": len(collisions),
+                "repeated_prompt_candidate_count": len(repeated),
+            },
+            "limits": [
+                "Canonical metadata only; no raw prompts or responses are stored.",
+                "Matching fingerprints concern supplied prompt text, not full context or parameters; repetition is not confirmed waste or savings.",
+                "Same-request identity collisions may be duplicate telemetry rather than repeated model work. Ledger totals are not changed.",
+                "Related evidence is limited to this account, provider and at most 20 records per category.",
+                "Prompt candidates are within 15 minutes of the selected event; global analytics uses fixed anchored clusters.",
+            ],
+        }
 
     def delete(self, session_id=None, before=None):
         clauses, args = [], []
@@ -83,8 +240,8 @@ class Store:
             clauses.append("session_id=?")
             args.append(session_id)
         if before:
-            clauses.append("timestamp<?")
-            args.append(before)
+            clauses.append("occurred_us<?")
+            args.append(epoch_us(before))
         where = " WHERE " + " AND ".join(clauses) if clauses else ""
         with self.lock, self.db:
             self.db.execute("INSERT OR IGNORE INTO tombstones SELECT id FROM events" + where, args)

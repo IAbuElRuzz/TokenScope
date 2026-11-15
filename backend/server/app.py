@@ -21,6 +21,7 @@ from backend.pricing.engine import Pricing
 from backend.server.auth import AuthDB, COOKIE, SESSION_SECONDS, csrf_value, digest
 from backend.server.limits import BodyLimitMiddleware
 from backend.storage.store import Store
+from backend.api.history import history_filters, install_history
 
 
 class Login(BaseModel):
@@ -269,8 +270,17 @@ def create_server_app(root: Path, public_origin: str | None = None):
         return build_report(tenants.ledger(data["user_id"]).events())
 
     @app.get("/api/export")
-    def export(data=Depends(session)):
-        return {"schema_version": 1, "events": tenants.ledger(data["user_id"]).events()}
+    def export(data=Depends(session), filters=Depends(history_filters)):
+        return {
+            "schema_version": 1,
+            "events": tenants.ledger(data["user_id"]).filtered_events(filters),
+            "filters": filters.public(),
+        }
+
+    def scoped_store(data=Depends(session)):
+        return tenants.ledger(data["user_id"])
+
+    install_history(app, scoped_store)
 
     @app.delete("/api/sessions/{session_id}")
     async def delete_session(session_id: str, data=Depends(mutation)):

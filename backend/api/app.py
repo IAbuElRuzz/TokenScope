@@ -12,6 +12,7 @@ from backend.core.config import api_token, data_directory
 from backend.core.schema import UsageEvent
 from backend.pricing.engine import Pricing
 from backend.storage.store import Store
+from backend.api.history import history_filters, install_history
 
 log = logging.getLogger("tokenscope")
 
@@ -130,8 +131,13 @@ def create_app(data_dir: Path | None = None, scanner=None, token: str | None = N
         return store.events(session_id)
 
     @app.get("/api/export", dependencies=[Depends(authorized)])
-    def export():
-        return {"schema_version": 1, "events": store.events()}
+    def export(filters=Depends(history_filters)):
+        return {"schema_version": 1, "events": store.filtered_events(filters), "filters": filters.public()}
+
+    def scoped_store(_=Depends(authorized)):
+        return store
+
+    install_history(app, scoped_store)
 
     @app.post("/api/events", dependencies=[Depends(authorized)])
     async def ingest(event: UsageEvent):
