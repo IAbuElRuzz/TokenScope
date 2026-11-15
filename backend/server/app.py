@@ -285,6 +285,12 @@ def create_server_app(root: Path, public_origin: str | None = None):
         return tenants.ledger(data["user_id"])
 
     install_history(app, scoped_store)
+    from backend.alerts.budgets import install_budgets
+
+    def budget_mutation_store(data=Depends(mutation)):
+        return tenants.ledger(data["user_id"])
+
+    install_budgets(app, scoped_store, budget_mutation_store)
 
     @app.delete("/api/sessions/{session_id}")
     async def delete_session(session_id: str, data=Depends(mutation)):
