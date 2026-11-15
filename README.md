@@ -43,6 +43,18 @@ tokenscope delete 'codex:SESSION_ID'
 
 Data lives under `~/.tokenscope` (override `TOKENSCOPE_DATA_DIR`). Logs are read-only. Retention defaults to 90 days, swept every minute; deleted event identifiers remain as tombstones to prevent source-log replay restoring deleted metadata. Never delete only the database if you expect deletion to survive replay. Full removal: stop TokenScope and remove its data directory; starting again reimports retained source logs.
 
+## Central multi-user server
+
+For a self-hosted team server, use [server setup and privacy](docs/server.md). Accounts have private dashboards; administrators see an explicit aggregate account/device overview. Developer computers enroll revocable devices and send metadata over HTTPS using a durable outbound collector. Server mode never scans the server host's sessions. Standalone remains the default; this first server milestone uses a single process with SQLite partitions, not PostgreSQL or public SaaS hosting.
+
+```sh
+# On the server, after configuring TOKENSCOPE_PUBLIC_ORIGIN to your TLS origin:
+tokenscope users create admin --admin
+tokenscope server
+# On an explicitly enrolled developer computer:
+tokenscope collect --server https://tokens.example.com --device-token-file /private/path/device-token
+```
+
 ## What is measured
 
 - Input/output, cache reads/writes, reasoning, reported totals, model, session, project basename, request timeline.
@@ -100,7 +112,7 @@ Reproduce a screenshot: launch with your own supported sessions, sign into the l
 
 ## Documentation
 
-[Detailed analytics](docs/analytics.md) · [Architecture](docs/architecture.md) · [Compatibility and research](docs/compatibility.md) · [API](docs/api.md) · [Plugins](docs/plugins.md) · [Troubleshooting](docs/troubleshooting.md) · [Validation and remaining work](docs/validation.md) · [Security](SECURITY.md)
+[Server mode](docs/server.md) · [Detailed analytics](docs/analytics.md) · [Architecture](docs/architecture.md) · [Compatibility and research](docs/compatibility.md) · [API](docs/api.md) · [Plugins](docs/plugins.md) · [Troubleshooting](docs/troubleshooting.md) · [Validation and remaining work](docs/validation.md) · [Security](SECURITY.md)
 
 ## Publishing
 

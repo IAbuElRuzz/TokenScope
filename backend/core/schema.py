@@ -37,6 +37,8 @@ class UsageEvent(BaseModel):
     tool_calls: int = Field(default=0, ge=0)
     billed_cost_usd: float | None = Field(default=None, ge=0)
     billing: Literal["unknown", "subscription", "api", "local"] = "unknown"
+    device_id: str | None = Field(default=None, max_length=64)
+    source_session_id: str | None = Field(default=None, max_length=256)
     prompt_analysis_opt_in: bool = False
     prompt_fingerprint: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     prompt_fingerprint_scope: str | None = Field(default=None, min_length=1, max_length=64)
