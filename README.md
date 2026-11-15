@@ -51,6 +51,8 @@ Data lives under `~/.tokenscope` (override `TOKENSCOPE_DATA_DIR`). Logs are read
 - Costs are **estimated API-equivalent**, not subscription bills. Actual billed USD is only accepted from explicitly instrumented authoritative sources. Missing prices remain unavailable, including unsupported cache TTLs.
 - Deterministic alerts cover context thresholds, model changes, token spikes, long session histories, no reported cache reads, session and rolling daily/weekly/30-day budgets. Desktop browser notifications require your click and permission.
 
+Sessions are grouped by LLM provider and ordered by latest measured activity. Each group keeps its newest session visible even when idle, alongside other active sessions. Older inactive sessions remain accessible under **Past sessions**, ordered newest first. Exact session token totals and provider totals include past sessions and all retained usage, independently of the recent chart limit.
+
 Dashboard charts use up to the latest 1,000 events; session totals use retained history. Date filtering selects sessions by last activity, not billing-period event aggregation. Export provides the full retained event ledger. There is no live generation rate unless a source supplies generation timing.
 
 ## Configuration

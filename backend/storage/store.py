@@ -165,7 +165,7 @@ class Store:
 
         alerts = analyze(list(sessions.values()), events, now)
         return {
-            "sessions": list(sessions.values()),
+            "sessions": sorted(sessions.values(), key=lambda s: (-datetime.fromisoformat(s["last_seen"]).timestamp(), s["session_id"])),
             "events": events[-1000:],
             "totals": totals,
             "alerts": alerts,
