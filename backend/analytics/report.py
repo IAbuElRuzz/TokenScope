@@ -86,7 +86,7 @@ def _request_key(event):
     return event["provider"], event["session_id"], event.get("request_id") or event["event_id"]
 
 
-def build_report(events):
+def build_report(events, context_history=None):
     """Aggregate the complete retained canonical ledger in O(n log n) time.
 
     Callers must supply revision-deduplicated events (Store.events does). Repeated
@@ -200,13 +200,18 @@ def build_report(events):
     # Context comparisons stop at an explicit boundary, model switch or observed shrink.
     context_observations = defaultdict(list)
     current_model = {}
-    for event in sorted(events, key=lambda e: (_stamp(e), e["event_id"])):
+    last_observed_context = {}
+    selected_ids = {event["event_id"] for event in requests}
+    for event in sorted(
+        context_history if context_history is not None else events, key=lambda e: (_stamp(e), e["event_id"])
+    ):
         sid = event["session_id"]
         model = (event["provider"], event["model"])
         if event.get("kind") in ("compaction", "reset") or current_model.get(sid, model) != model:
             previous_model = current_model.get(sid)
             if previous_model is not None:
                 context_observations.pop((sid, *previous_model), None)
+                last_observed_context.pop((sid, *previous_model), None)
         current_model[sid] = model
         if (
             event.get("kind") == "usage"
@@ -215,9 +220,12 @@ def build_report(events):
         ):
             key = (sid, *model)
             previous = context_observations[key]
-            if previous and event["context_tokens"] < previous[-1]["context_tokens"]:
+            last_context = last_observed_context.get(key)
+            if last_context is not None and event["context_tokens"] < last_context:
                 previous.clear()
-            previous.append(event)
+            last_observed_context[key] = event["context_tokens"]
+            if event["event_id"] in selected_ids:
+                previous.append(event)
     session_models = defaultdict(list)
     for event in requests:
         if event["event_id"] in duplicate_ids:

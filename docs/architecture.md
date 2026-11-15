@@ -10,4 +10,12 @@ The collector isolates malformed files and retries incomplete JSONL tails. Metad
 
 Context occupancy is independently carried per event. Latest-request estimates may omit unseen system tokens or output; a model switch or compaction invalidates old context. Capacity is source-reported or a catalog entry, not a universal constant. No compaction countdown is invented.
 
-WebSocket clients authenticate in their first frame (not URL). Each client has a one-marker queue, so a slow client does not accumulate unbounded events. Reconnect sends a fresh snapshot and recovers changes made while disconnected. Snapshot currently materializes retained history for analytics, which limits large-history scalability; charts receive at most 1,000 events. Optimize SQL aggregation/pagination before enterprise scale.
+Standalone WebSocket clients authenticate in their first frame (not URL); server-mode streams authenticate the account cookie and configured Origin. Each client has a one-marker queue, so a slow client does not accumulate unbounded events. Reconnect sends a fresh snapshot and recovers changes made while disconnected. Snapshot currently materializes retained history for analytics, which limits large-history scalability; charts receive at most 1,000 events. Optimize SQL aggregation/pagination before enterprise scale.
+
+
+## Explicit central server
+
+`backend.server.app` is a separate mode: no native scanner on the server. Browser account sessions and registered device ingestion use separate hashed opaque secrets in an SQLite control database. Each account owns a physically separate canonical Store ledger, preserving standalone accounting/replay logic while avoiding legacy identifier/tombstone collisions. The server namespaces event/session identities by the authenticated device and ignores payload tenant claims. WebSocket wakeup queues are keyed by authenticated account; admin overview is a deliberate aggregate-only endpoint. Outbound collectors use SQLite pending batches/delivery receipts and HTTPS without redirects. This first mode supports a single process/modest trusted team; PostgreSQL, distributed pub/sub, SSO and horizontal scaling remain future work.
+
+
+History querying uses a resumable integer UTC-microsecond index, bound exact metadata filters, stable timestamp/event-ID pagination and scoped request detail. List/count/totals are read consistently per response; full matching analytics/export still materialize history. Context recommendations retain same-account unfiltered reset/model boundary checks without adding excluded consumption. See [history.md](history.md).
