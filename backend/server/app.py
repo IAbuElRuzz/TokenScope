@@ -212,6 +212,10 @@ def create_server_app(root: Path, public_origin: str | None = None):
         await notify(data["user_id"])
         return {"ok": True}
 
+    from backend.server.health import install_health
+
+    install_health(app, auth, session)
+
     @app.get("/api/devices")
     def devices(data=Depends(session)):
         return auth.devices(data["user_id"])

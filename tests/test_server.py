@@ -339,6 +339,8 @@ class FakeOpener:
         self.requests.append(request)
         if self.error:
             raise self.error
+        if request.full_url.endswith("/api/collector-heartbeat"):
+            return FakeResponse(b'{"accepted":true}')
         records = json.loads(request.data)["events"]
         return FakeResponse(
             json.dumps(
@@ -355,7 +357,7 @@ def test_collector_durable_spool_replay_batches_and_malformed_records(tmp_path, 
     opener = FakeOpener()
     collector.opener = opener
     assert collector.run(once=True)
-    assert len(opener.requests) == 3 and spool.pending() == 0
+    assert len([r for r in opener.requests if r.full_url.endswith("/api/ingest")]) == 3 and spool.pending() == 0
     assert "1 invalid metadata" in capsys.readouterr().out
     assert "invalid" not in str(list(spool.db.execute("SELECT payload FROM deliveries")))
     spool.close()
@@ -363,7 +365,7 @@ def test_collector_durable_spool_replay_batches_and_malformed_records(tmp_path, 
     collector = Collector(ORIGIN, "tsd_" + "a" * 32, spool, Scanner(records[:-1]))
     collector.opener = opener
     assert collector.run(once=True)
-    assert len(opener.requests) == 3  # restart replay uses delivered receipts
+    assert len([r for r in opener.requests if r.full_url.endswith("/api/ingest")]) == 3  # restart replay uses delivered receipts
     assert all(row[0] is None for row in spool.db.execute("SELECT payload FROM deliveries"))
     spool.close()
 
