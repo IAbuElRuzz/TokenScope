@@ -138,6 +138,9 @@ def create_app(data_dir: Path | None = None, scanner=None, token: str | None = N
         return store
 
     install_history(app, scoped_store)
+    from backend.alerts.budgets import install_budgets
+
+    install_budgets(app, scoped_store, scoped_store)
 
     @app.post("/api/events", dependencies=[Depends(authorized)])
     async def ingest(event: UsageEvent):
@@ -154,6 +157,10 @@ def create_app(data_dir: Path | None = None, scanner=None, token: str | None = N
         deleted = store.delete(session_id=session_id)
         await broadcast()
         return {"deleted": deleted}
+
+    @app.get("/api/collector-health", dependencies=[Depends(authorized)])
+    def collector_health():
+        return {"devices": []}
 
     @app.get("/api/providers", dependencies=[Depends(authorized)])
     def providers():
